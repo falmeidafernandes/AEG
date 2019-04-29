@@ -13,20 +13,32 @@ class Individual(object):
     """
     
     
-    def __init__(self, genome, ancestors = None, Q_value = np.nan,
-                 generation_rank = np.nan):
+    def __init__(self, genome, ancestors = None, generation = 0, 
+                 Q_value = np.nan, generation_rank = np.nan):
         
         """
+        
         """
         
         self.genome = genome
-        self.ancestors = ancestors
+        self.generation = generation
         self.Q_value = Q_value
         self.generation_rank = generation_rank
+        
+        if ancestors is None:
+            self.ancestors = [np.nan]*self.generation
+        else:
+            self.ancestors = ancestors
     
     
-    
-    def reproduce(self, mutation_factor = 0.1, N_children = 1000):
+    def reproduce(self, mutation_factor = 0.1, N_children = 1000,
+                  partner = None):
+        
+        """
+        
+        """
+        
+        partners_N = 1 if partner is None else 2
         
         children = []
         children_ancestors = self.ancestors + [self.generation_rank]
@@ -35,10 +47,19 @@ class Individual(object):
             child_genome = {}
             
             for param in self.genome.keys():
-            
-                child_genome[param] = np.random.normal(loc = self.genome[param],
+                
+                choosen_partner = np.random.choice(partners_N)
+                
+                if choosen_partner == 0:
+                    param_loc = self.genome[param]
+                elif choosen_partner == 1:
+                    param_loc = partner.genome[param]
+                
+                param_sampled = float(np.random.normal(loc = self.genome[param],
                                                        scale = mutation_factor,
-                                                       size = 1)
+                                                       size = 1))
+                
+                child_genome[param] = param_sampled
                 
             child = Individual(genome = child_genome,
                                ancestors = children_ancestors)
@@ -50,11 +71,16 @@ class Individual(object):
 
 
 
+teste = Individual(genome = {'a': 1, 'b': 2})
+children = teste.reproduce()
+children[0].genome
+
 
 
 class AEG(object):
     
     """
+    
     """
     
     def __init__(self, genome, Q_function):
