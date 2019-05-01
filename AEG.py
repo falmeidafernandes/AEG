@@ -4,6 +4,14 @@ import numpy as np
 
 """
 
+__author__ = "Felipe Almeida-Fernandes"
+__copyright__ = "Copyright 2019, IAG/USP"
+__credits__ = ["Felipe Almeida-Fernandes"]
+__license__ = "GPL"
+__version__ = "1.0"
+__maintainer__ = "Felipe Almeida-Fernandes"
+__email__ = "falmeidafernandes@gmail.com"
+__status__ = "Development"
 
 # The code must be designed to work like this: (ex. to fit parameters of a line function)
 # >>> import aeg
@@ -84,7 +92,7 @@ class Individual(object):
 
 teste = Individual(genome = {'a': 1, 'b': 2})
 children = teste.reproduce()
-print children[0].genome
+#print children[0].genome
 
 
 
@@ -151,7 +159,8 @@ class AEG(object):
         # Update generation number
         self.generation += 1
     
-    def iterate(self, training_data, max_iterations = 100, fitness_threshold = 0.999, N_spontaneous = 1000, **kargs):
+    def iterate(self, training_data, max_generations = 100, fitness_threshold = 0.999, N_spontaneous = 1000,
+                reverse = False, **kargs):
         """
 
         :return:
@@ -163,31 +172,41 @@ class AEG(object):
         # Begin the loop
         overall_fittest = None
         finished = False
-        iteration = 0
 
         while not finished:
-            iteration += 1
-
             # Step 1: measure fitness of the current generation
             current_generation_individuals = self.individuals[-1]
             self.objective_function(current_generation_individuals, training_data)
 
             # Step 2: select the fittest individuals
-            current_fittest = self.selector(kargs)
+            current_fittest = self.selector(generation = current_generation_individuals,
+                                            reverse = reverse, **kargs)
 
             # Step 3: check assignment of overall fittest
             if overall_fittest is None:
                 overall_fittest = current_fittest[0]
             else:
-                if current_fittest[0].fitness > overall_fittest.fitness:
-                    overall_fittest = current_fittest[0]
+                if reverse is False:
+                    if current_fittest[0].fitness > overall_fittest.fitness:
+                        overall_fittest = current_fittest[0]
+                else:
+                    if current_fittest[0].fitness < overall_fittest.fitness:
+                        overall_fittest = current_fittest[0]
+
+            print 'Generation {0} | Overall fittest {1}'.format(self.generation,
+                                                                overall_fittest.genome)
 
             # Step 4: check if final is achieve
-            if current_fittest[0].fitness >= fitness_threshold:
-                self.fittest = overall_fittest
-                return overall_fittest
+            if reverse is False:
+                if current_fittest[0].fitness >= fitness_threshold:
+                    self.fittest = overall_fittest
+                    return overall_fittest
+            else:
+                if current_fittest[0].fitness <= fitness_threshold:
+                    self.fittest = overall_fittest
+                    return overall_fittest
 
-            elif iteration == max_iterations:
+            if self.generation == max_generations:
                 self.fittest = overall_fittest
                 return overall_fittest
 
