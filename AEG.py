@@ -88,14 +88,6 @@ class Individual(object):
         return children
 
 
-
-
-teste = Individual(genome = {'a': 1, 'b': 2})
-children = teste.reproduce()
-#print children[0].genome
-
-
-
 class AEG(object):
     
     """
