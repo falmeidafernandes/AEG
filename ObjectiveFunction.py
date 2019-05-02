@@ -20,6 +20,6 @@ def LineFitting(generation, training_data):
 
         y_pred = param_a * xdata + param_b
 
-        fitness = np.sum((ydata-y_pred)**2)
+        fitness = np.sum(-(ydata-y_pred)**2)
         individual.fitness = fitness
 

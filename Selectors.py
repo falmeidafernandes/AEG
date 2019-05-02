@@ -4,7 +4,7 @@ import numpy as np
 
 """
 
-def RankByFittest(generation, N_survivors = 5, reverse = False):
+def RankByFittest(generation, N_survivors = 5):
     """
 
     :param generation: list of individuals with self.fitness already calculated
@@ -26,10 +26,7 @@ def RankByFittest(generation, N_survivors = 5, reverse = False):
     order = np.argsort(fitness_list)
 
     # order the generation according to fitness
-    if reverse is False:
-        generation_ordered = generation[order][::-1]
-    else:
-        generation_ordered = generation[order]
+    generation_ordered = generation[order][::-1]
 
     survivors = []
 

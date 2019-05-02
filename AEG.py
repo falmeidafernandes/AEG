@@ -1,5 +1,5 @@
 import numpy as np
-
+from matplotlib import pyplot as plt
 """
 
 """
@@ -32,7 +32,7 @@ class Individual(object):
     """
     
     
-    def __init__(self, genome, ancestors = None, generation = 0, 
+    def __init__(self, genome, ancestor = None, generation = 0,
                  fitness = np.nan, generation_rank = np.nan):
         
         """
@@ -43,11 +43,7 @@ class Individual(object):
         self.generation = generation
         self.fitness = fitness
         self.generation_rank = generation_rank
-        
-        if ancestors is None:
-            self.ancestors = [np.nan]*self.generation
-        else:
-            self.ancestors = ancestors
+        self.ancestor = ancestor
     
     
     def reproduce(self, mutation_factor = 0.1, N_children = 1000,
@@ -60,8 +56,7 @@ class Individual(object):
         partners_N = 1 if partner is None else 2
         
         children = []
-        children_ancestors = self.ancestors + [self.generation_rank]
-        
+
         for i in range(N_children):
             child_genome = {}
             
@@ -71,7 +66,7 @@ class Individual(object):
                 
                 if choosen_partner == 0:
                     param_loc = self.genome[param]
-                elif choosen_partner == 1:
+                else:
                     param_loc = partner.genome[param]
                 
                 param_sampled = float(np.random.normal(loc = param_loc,
@@ -79,9 +74,14 @@ class Individual(object):
                                                        size = 1))
                 
                 child_genome[param] = param_sampled
-                
+
+            if partner is None:
+                child_ancestors = self
+            else:
+                child_ancestors = [self, partner]
+
             child = Individual(genome = child_genome,
-                               ancestors = children_ancestors)
+                               ancestor = child_ancestors)
             
             children.append(child)
         
@@ -94,14 +94,15 @@ class AEG(object):
     
     """
     
-    def __init__(self, genome, objective_function, selector):
+    def __init__(self, genome, objective_function, selector, mutation_factor = 0.1):
         
         self.genome = genome
         self.objective_function = objective_function
         self.selector = selector
         self.generation = 0
         self.individuals = []
-    
+        self.mutation_factor = mutation_factor
+
     def order_individuais(self):
         """
         Orders individuals by Q_value rank
@@ -115,7 +116,6 @@ class AEG(object):
         """
 
         new_spontaneous_individuals = []
-        ancestors_spontaneous = [np.nan] * self.generation + [0]
 
         for i in range(N_spontaneous):
             genome_i = {}
@@ -124,35 +124,99 @@ class AEG(object):
                 vmax = self.genome[param][1]
                 genome_i[param] = vmin + (vmax - vmin) * np.random.uniform()
 
-            individual = Individual(genome=genome_i,
-                                    ancestors=ancestors_spontaneous)
+            individual = Individual(genome=genome_i)
 
             new_spontaneous_individuals.append(individual)
 
         return new_spontaneous_individuals
 
 
+    def dynamic_mutation_factor(self, survivors):
+        mutation_factor = 0
+
+        for param in self.genome.keys():
+            survivors_param = []
+
+            for survivor in survivors:
+                survivors_param.append(survivor.genome[param])
+
+            mutation_factor += np.std(survivors_param)
+
+        mutation_factor = 3*mutation_factor/len(self.genome.keys())
+
+        return mutation_factor
+
+
+    def get_mutation_factor(self):
+        if self.mutation_factor == 'dynamic':
+            return self.dynamic_mutation_factor(survivors=self.survivors)
+        else:
+            return self.mutation_factor
+
+
+    def plot2d(self, param1, param2, center=None):
+
+        x = []
+        y = []
+
+        for individual in self.individuals:
+            x.append(individual.genome[param1])
+            y.append(individual.genome[param2])
+
+        plt.scatter(x, y, s = 20, color = "#666666", alpha = 0.5, zorder = 0)
+
+        if center is not None:
+            plt.scatter(center[0], center[1], s = 200, marker = 'x', color = "#0000AA", alpha = 1, zorder = 1)
+
+        if self.survivors is not None:
+            x_survivor = []
+            y_survivor = []
+
+            for survivor in self.survivors:
+                x_survivor.append(survivor.genome[param1])
+                y_survivor.append(survivor.genome[param2])
+
+        plt.scatter(x_survivor, y_survivor, s = 50, color = "#aa0000", alpha = 1, zorder = 0)
+
+        plt.gca().set_title('Generation {0}'.format(self.generation))
+        plt.gca().set_xlim((self.genome[param1][0], self.genome[param1][1]))
+        plt.gca().set_ylim((self.genome[param2][0], self.genome[param2][1]))
+        plt.gca().set_xlabel(param1)
+        plt.gca().set_ylabel(param2)
+        plt.show()
+
     def create_new_generation(self, N_spontaneous = 1000, survivors = None,
                               N_children_per_survivor = 1000):
         
-        # add new list to self.individuals
-        self.individuals.append([])
+        # create list of new individuals
+        new_individuals = []
+
+        # keep the survivors in the new generation
+        if survivors is not None:
+            new_individuals += survivors
         
         # generate spontaneous individuals
         new_spontaneous_individuals = self.create_spontaneous_generation(N_spontaneous=N_spontaneous)
-        self.individuals[-1] += new_spontaneous_individuals
+        new_individuals += new_spontaneous_individuals
         
         # survivor's reproduction
         if survivors is not None:
+            mutation_factor = self.get_mutation_factor()
+            print "mutation factor {0}".format(mutation_factor)
+
             for survivor in survivors:
-                children = survivor.reproduce(N_children=N_children_per_survivor)
-                self.individuals[-1] += children
+                children = survivor.reproduce(N_children=N_children_per_survivor, mutation_factor=mutation_factor)
+                new_individuals += children
+
+        # Update individuals attribute
+        self.individuals = new_individuals
 
         # Update generation number
         self.generation += 1
-    
+
+
     def iterate(self, training_data, max_generations = 100, fitness_threshold = 0.999, N_spontaneous = 1000,
-                reverse = False, **kargs):
+                plot = None, **kargs):
         """
 
         :return:
@@ -162,45 +226,38 @@ class AEG(object):
         self.create_new_generation(N_spontaneous = N_spontaneous)
 
         # Begin the loop
-        overall_fittest = None
+        self.overall_fittest = None
         finished = False
 
         while not finished:
+
             # Step 1: measure fitness of the current generation
-            current_generation_individuals = self.individuals[-1]
-            self.objective_function(current_generation_individuals, training_data)
+            self.objective_function(self.individuals, training_data)
 
             # Step 2: select the fittest individuals
-            current_fittest = self.selector(generation = current_generation_individuals,
-                                            reverse = reverse, **kargs)
+            self.survivors = self.selector(generation = self.individuals)
 
             # Step 3: check assignment of overall fittest
-            if overall_fittest is None:
-                overall_fittest = current_fittest[0]
-            else:
-                if reverse is False:
-                    if current_fittest[0].fitness > overall_fittest.fitness:
-                        overall_fittest = current_fittest[0]
-                else:
-                    if current_fittest[0].fitness < overall_fittest.fitness:
-                        overall_fittest = current_fittest[0]
+            if self.overall_fittest is None:
+                self.overall_fittest = self.survivors[0]
+            elif self.survivors[0].fitness > self.overall_fittest.fitness:
+                self.overall_fittest = self.survivors[0]
 
-            print 'Generation {0} | Overall fittest {1}'.format(self.generation,
-                                                                overall_fittest.genome)
+            print 'Generation {0} | Overall fittest {1} | fitness {2}'.format(self.generation,
+                                                                              self.overall_fittest.genome,
+                                                                              self.overall_fittest.fitness)
+            # Step 3.5: plot
+            if plot == 'plot2d':
+                self.plot2d(**kargs)
 
             # Step 4: check if final is achieve
-            if reverse is False:
-                if current_fittest[0].fitness >= fitness_threshold:
-                    self.fittest = overall_fittest
-                    return overall_fittest
-            else:
-                if current_fittest[0].fitness <= fitness_threshold:
-                    self.fittest = overall_fittest
-                    return overall_fittest
+            if self.overall_fittest.fitness >= fitness_threshold:
+                self.fittest = self.overall_fittest
+                return self.overall_fittest
 
             if self.generation == max_generations:
-                self.fittest = overall_fittest
-                return overall_fittest
+                self.fittest = self.overall_fittest
+                return self.overall_fittest
 
             # Step 5: reproduction of new generation
-            self.create_new_generation(N_spontaneous = N_spontaneous, survivors = current_fittest)
+            self.create_new_generation(N_spontaneous = N_spontaneous, survivors = self.survivors)

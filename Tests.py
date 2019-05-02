@@ -8,7 +8,7 @@ from Selectors import RankByFittest
 def test_Individual_class_initialization():
     individual = aeg.Individual(genome={'a': 1, 'b': 2})
     print individual.genome
-    print individual.ancestors
+    print individual.ancestor
 
 if __name__ == "__main__":
     run = raw_input("Run test_Individual_class_initialization? (y/N): ")
@@ -22,11 +22,11 @@ def test_Individual_reproduction():
     individual = aeg.Individual(genome={'a': 1, 'b': 2})
     children = individual.reproduce()
     print children[0].genome
-    print children[0].ancestors
+    print children[0].ancestor
     print children[1].genome
-    print children[1].ancestors
+    print children[1].ancestor
     print children[200].genome
-    print children[200].ancestors
+    print children[200].ancestor
 
 if __name__ == "__main__":
     run = raw_input("Run test_Individual_reproduction? (y/N): ")
@@ -77,7 +77,7 @@ def test_RankByFittest():
     training_data = {'x': x, 'y': y}
 
     LineFitting(generation = children, training_data = training_data)
-    survivors = RankByFittest(generation = children, reverse = True)
+    survivors = RankByFittest(generation = children)
 
     print survivors
     for i in range(len(survivors)):
@@ -106,7 +106,9 @@ def test_AEG_iterate():
                            objective_function=LineFitting,
                            selector=RankByFittest)
 
-    best = ModelFitting.iterate(training_data=training_data, reverse=True, max_generations = 100, fitness_threshold=1e-5)
+    ModelFitting.mutation_factor = 'dynamic'
+    best = ModelFitting.iterate(training_data=training_data, max_generations = 100, fitness_threshold=-1e-15,
+                                plot='plot2d', param1='a', param2='b', center=[2,3])
     print best
     print best.genome
 
