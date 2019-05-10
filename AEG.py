@@ -198,44 +198,105 @@ class GA(object):
 
     def create_spontaneous_generation(self, N_spontaneous):
         """
+        Generates a new list of Individuals randomly sampled inside the given
+        range for each parameter (defined in self.genome)
 
-        :param N_spontaneous:
-        :return:
+        This was implemented to create the first generation of Individuals and
+        also to ensure that the whole parameter space is explored by future
+        generations of Individuals, avoiding the convergence to local minima
+        instead of a global one.
+
+        Parameters
+        ----------
+        N_spontaneous: int
+            Number of Individuals to be randomly generated
+
+        Notes
+        -----
+        Each parameter is sampled inside the range defined in
+        self.genome[param], which must be a list of 2 elements: the minimum
+        and maximum values accepted for the parameter 'param'
+
+        Returns
+        -------
+        list of Individuals
+            the list of randomly generated Individuals
         """
 
+        # Create list of new Individuals to be filled and returned
         new_spontaneous_individuals = []
 
+        # For each new Individual to be created, sample the set of parameters
         for i in range(N_spontaneous):
+
+            # Create dictionary that will correspond to the Individual set of parameters
             genome_i = {}
+
+            # Sample the value of each parameter
             for param in self.genome.keys():
+                # Get the minimum and maximum values for this parameter
                 vmin = self.genome[param][0]
                 vmax = self.genome[param][1]
+
+                # Sample value and include in the genome of the new Individual
                 genome_i[param] = vmin + (vmax - vmin) * np.random.uniform()
 
+            # Create new Individual using this genome
             individual = Individual(genome=genome_i)
 
+            # Include the generated individual in the Individuals list to be returned
             new_spontaneous_individuals.append(individual)
 
         return new_spontaneous_individuals
 
 
     def dynamic_mutation_factor(self, survivors):
+        """
+        Defines one of the possible methods to determine the mutation_factor
+        used in the replication of a given Individual
+
+        In this case, the mutation_factor corresponds to the average 3*sigma
+        deviation calculated from the distribution of the parameters of a
+        list of survivors
+
+        Parameters
+        ----------
+        survivors: list of Individuals
+            list of Individuals that will originate the next generation
+
+        Returns
+        -------
+        float
+            the value calculated for the mutation_factor
+        """
+
+        # Initialize the value of the mutation _factor
         mutation_factor = 0
 
+        # Calculate the standard deviation of each parameter among the survivors
         for param in self.genome.keys():
+
+            # Create list to receive the value of this parameter for each individual
             survivors_param = []
 
             for survivor in survivors:
                 survivors_param.append(survivor.genome[param])
 
+            # calculate the standard deviation of this parameter
             mutation_factor += np.std(survivors_param)
 
+        # Calculate the average 3*sigma deviation among all parameters
         mutation_factor = 3*mutation_factor/len(self.genome.keys())
 
         return mutation_factor
 
 
     def get_mutation_factor(self):
+        """
+        Returns the mutation_factor for the current generation depending on the
+        input chosen by the user
+        """
+
         if self.mutation_factor == 'dynamic':
             return self.dynamic_mutation_factor(survivors=self.survivors)
         else:
@@ -243,6 +304,9 @@ class GA(object):
 
 
     def plot2d(self, param1, param2, center=None):
+        """
+
+        """
 
         x = []
         y = []
@@ -275,6 +339,29 @@ class GA(object):
 
     def create_new_generation(self, N_spontaneous = 1000, survivors = None,
                               N_children_per_survivor = 1000):
+
+        """
+        Creates a new generation of Individuals based on a list of survivors.
+        This methods updates self.individuals with the new list of Individuals
+
+        Parameters
+        ----------
+        N_spontaneous: int
+            Number of Individuals randomly generated with no relation with the
+            precedent generations (see self.create_spontaneous_generation for
+            more information)
+        survivors: list of Individuals
+            Individuals selected to be replicated for the new generation
+        N_children_per_survivor: int
+            Number of new Individuals to be sampled from each survivor (see
+            Individual.reproduce for more information)
+
+        Returns
+        -------
+        self.individuals: list of Individuals
+            Updates the 'individuals' attribute with the generated list of
+            Individuals
+        """
         
         # create list of new individuals
         new_individuals = []
@@ -307,7 +394,6 @@ class GA(object):
                 plot = None, **kargs):
         """
 
-        :return:
         """
 
         # Step 0: generate first spontaneous population
