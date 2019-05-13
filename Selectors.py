@@ -53,3 +53,74 @@ def RankByFittest(generation, N_survivors = 5):
             survivors.append(individual)
 
     return survivors
+
+
+
+def BestofQuadrant(generation):
+    """
+    Selects N_params**2 individuals, where each selected individual is
+    the fittest individual in its own quadrant.
+
+    Parameters
+    ----------
+    generation: list of Individuals
+        the list of individuals that will be used to select the best from each
+        quadrant
+
+    Returns
+    -------
+    list of Individuals
+        A list containing the fittest individual for each quadrant
+    """
+
+    # Get param names
+    params = generation[0].genome.keys()
+
+    # Create survivors dict and fill quadrants
+    survivors = {}
+
+    # Create list of quadrants
+    quadrants = ['']
+    for i in range(len(params)):
+        new_quadrants = []
+        for quadrant in quadrants:
+            new_quadrants.append(quadrant+'0')
+            new_quadrants.append(quadrant+'1')
+
+        quadrants = new_quadrants
+
+    # Create instance for the survivor of this parameter
+    for quadrant in quadrants:
+        survivors[quadrant] = None
+
+    # Find the quadrant of each individual and see if it's the best of the quadrant
+    for individual in generation:
+
+        # find individual quadrant
+        individual_quadrant = ''
+        for param in params:
+            if individual.genome[param] < 0:
+                individual_quadrant += '0'
+            else:
+                individual_quadrant += '1'
+
+        # Check if this individual is the best of that quadrant so far
+        if survivors[individual_quadrant] is None:
+            survivors[individual_quadrant] = individual
+        else:
+            if individual.fitness > survivors[individual_quadrant].fitness:
+                survivors[individual_quadrant] = individual
+
+    # Turn survivors dict into survivors array
+    survivors = np.array(list(survivors.values()))
+
+    # Order survivors by fitness
+    fitness = []
+    for survivor in survivors:
+        fitness.append(survivor.fitness)
+
+    order = np.argsort(fitness)
+    survivors = list(survivors[order][::-1])
+
+    return survivors
+

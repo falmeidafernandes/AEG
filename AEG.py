@@ -71,7 +71,7 @@ class Individual(object):
     
     
     def reproduce(self, mutation_factor = 0.1, N_children = 1000,
-                  partner = None):
+                  partner = None, set_range = None):
         
         # IDEA: rewrite this function allowing for a list of partners
 
@@ -143,6 +143,14 @@ class Individual(object):
                 param_sampled = float(np.random.normal(loc = param_loc,
                                                        scale = mutation_factor[param],
                                                        size = 1))
+
+                # If parameter is sampled outside range, ramdonly resample it inside the range
+                if set_range is not None:
+                    vmin = set_range[param][0]
+                    vmax = set_range[param][1]
+
+                    if param_sampled < vmin or param_sampled > vmax:
+                        param_sampled = vmin + (vmax - vmin) * np.random.uniform()
 
                 # Include the parameter and its value in the genome of the generated child
                 child_genome[param] = param_sampled
@@ -259,7 +267,7 @@ class GA(object):
         return new_spontaneous_individuals
 
 
-    def dynamic_mutation_factor(self, survivors):
+    def dynamic_mutation_factor(self, survivors, sigma = 3):
         """
         Defines one of the possible methods to determine the mutation_factor,
         for each parameter, used in the replication of a given Individual
@@ -292,7 +300,7 @@ class GA(object):
                 survivors_param.append(survivor.genome[param])
 
             # set the mutation factor of this parameter
-            mutation_factor[param] = 3*np.std(survivors_param)
+            mutation_factor[param] = sigma*np.std(survivors_param)
 
         return mutation_factor
 
@@ -319,6 +327,9 @@ class GA(object):
         # If mutation factor is set as 'dynamic', return it
         elif self.mutation_factor == 'dynamic':
             return self.dynamic_mutation_factor(survivors=self.survivors)
+
+        elif self.mutation_factor == 'dynamic1sigma':
+            return self.dynamic_mutation_factor(survivors=self.survivors, sigma = 1)
 
 
     def plot2d(self, param1, param2, center=None):
@@ -347,6 +358,9 @@ class GA(object):
                 y_survivor.append(survivor.genome[param2])
 
         plt.scatter(x_survivor, y_survivor, s = 50, color = "#aa0000", alpha = 1, zorder = 0)
+
+        plt.plot([-100,100],[0,0], color = "#000000")
+        plt.plot([0,0],[-100,100], color = "#000000")
 
         plt.gca().set_title('Generation {0}'.format(self.generation))
         plt.gca().set_xlim((self.genome[param1][0], self.genome[param1][1]))
@@ -398,7 +412,9 @@ class GA(object):
             print("mutation factor {0}".format(mutation_factor))
 
             for survivor in survivors:
-                children = survivor.reproduce(N_children=N_children_per_survivor, mutation_factor=mutation_factor)
+                children = survivor.reproduce(N_children=N_children_per_survivor,
+                                              mutation_factor=mutation_factor,
+                                              set_range=self.genome)
                 new_individuals += children
 
         # Update individuals attribute
