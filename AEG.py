@@ -393,7 +393,33 @@ class GA(object):
     def iterate(self, training_data, max_generations = 100, fitness_threshold = 0.999, N_spontaneous = 1000,
                 plot = None, **kargs):
         """
+        Iterates the genetic algorithm through a number of generations until
+        convergence or until the maximum number of generations is reached
 
+        Parameters
+        ----------
+        training_data: dict
+            data containing a set of inputs and expected outputs for the model
+            to be fitted using the genetic algorithm
+        max_generations: int
+            max number of generations to iterate the genetic algorithm if
+            convergence is not reached
+        fitness_threshold: float
+            the value of fitness for which the model is considered to have
+            converged. The chosen value must depend on how the fitness is
+            measured by the objective function being used
+        N_spontaneous: int
+            the number of spontaneous Individuals (sets of parameters) to be
+            generated in the first generation and in between two generations.
+
+        Returns
+        -------
+        self.individuals: list of Individuals
+            Updated after each generation
+        self.survivors: list of Individuals
+            List of survivors of the last iterated generation
+        self.overall_fittest: Individual
+            The fittest Individual throughout the whole iteration
         """
 
         # Step 0: generate first spontaneous population
@@ -426,11 +452,9 @@ class GA(object):
 
             # Step 4: check if final is achieve
             if self.overall_fittest.fitness >= fitness_threshold:
-                self.fittest = self.overall_fittest
                 return self.overall_fittest
 
-            if self.generation == max_generations:
-                self.fittest = self.overall_fittest
+            elif self.generation == max_generations:
                 return self.overall_fittest
 
             # Step 5: reproduction of new generation

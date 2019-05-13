@@ -1,6 +1,6 @@
 import numpy as np
 import AEG as aeg
-from ObjectiveFunction import LineFitting
+from ObjectiveFunction import LineFitting, PolyFitting
 from Selectors import RankByFittest
 
 ########################################################################################################################
@@ -118,3 +118,29 @@ if __name__ == "__main__":
 
     if run in ("Y", 'y'):
         test_GA_iterate()
+
+def test_PolyFitting():
+    # Training data
+    x = np.arange(-10,10,0.1)
+    y = 3 + 2*x + 1*x**2 + 2*x**3
+    training_data = {'x': x, 'y': y}
+
+    # Genome
+    genome = {'a0': (-10,10), 'a1': (-10,10), 'a2': (-10,10), 'a3': (-10,10)}
+
+    ModelFitting = aeg.GA(genome = genome,
+                          objective_function=PolyFitting,
+                          selector=RankByFittest)
+
+    ModelFitting.mutation_factor = 'dynamic'
+    best = ModelFitting.iterate(training_data=training_data, max_generations = 100, fitness_threshold=-1e-15,
+                                plot='plot2d', param1='a0', param2='a1', center=[1,2])
+    print(best)
+    print(best.genome)
+
+
+if __name__ == "__main__":
+    run = input("Run test_PolyFitting? (y/N): ")
+
+    if run in ("Y", 'y'):
+        test_PolyFitting()
