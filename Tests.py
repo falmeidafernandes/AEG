@@ -122,7 +122,12 @@ if __name__ == "__main__":
 def test_PolyFitting():
     # Training data
     x = np.arange(-10,10,0.1)
-    y = 3 + 2*x + 1*x**2 + 2*x**3
+    a0 = 3
+    a1 = 2
+    a2 = 1
+    a3 = 2
+
+    y = a0 + a1*x + a2*x**2 + a3*x**3
     training_data = {'x': x, 'y': y}
 
     # Genome
@@ -134,7 +139,7 @@ def test_PolyFitting():
 
     ModelFitting.mutation_factor = 'dynamic'
     best = ModelFitting.iterate(training_data=training_data, max_generations = 100, fitness_threshold=-1e-15,
-                                plot='plot2d', param1='a0', param2='a1', center=[1,2])
+                                plot='plot2d', param1='a0', param2='a1', center=[a0,a1])
     print(best)
     print(best.genome)
 

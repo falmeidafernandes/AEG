@@ -86,11 +86,12 @@ class Individual(object):
 
         Parameters
         ----------
-        mutation_factor: float
+        mutation_factor: dict
             Controls the amount of difference between the replicated and the
             original genome. In this implementation, the new parameters are
             sampled from a normal distribution around the original parameter
-            value, with the mutation_factor as the standard deviation.
+            value, with the mutation_factor of each parameter as the standard
+            deviation.
         N_children: int
             The number of Individuals to be generated
         partner: None or Individual
@@ -112,6 +113,14 @@ class Individual(object):
         # Initialize the list of children that will be filled and returned
         children = []
 
+        # If mutation factor given as int or float, turn it into a dict
+        if type(mutation_factor) in (int, float):
+            mutation_factor_dict = {}
+            for param in self.genome.keys():
+                mutation_factor_dict[param] = mutation_factor
+
+            mutation_factor = mutation_factor_dict
+
         # Generate each child
         for i in range(N_children):
 
@@ -132,7 +141,7 @@ class Individual(object):
 
                 # Sample the new value of the parameter around the selected value
                 param_sampled = float(np.random.normal(loc = param_loc,
-                                                       scale = mutation_factor,
+                                                       scale = mutation_factor[param],
                                                        size = 1))
 
                 # Include the parameter and its value in the genome of the generated child
@@ -252,11 +261,11 @@ class GA(object):
 
     def dynamic_mutation_factor(self, survivors):
         """
-        Defines one of the possible methods to determine the mutation_factor
-        used in the replication of a given Individual
+        Defines one of the possible methods to determine the mutation_factor,
+        for each parameter, used in the replication of a given Individual
 
         In this case, the mutation_factor corresponds to the average 3*sigma
-        deviation calculated from the distribution of the parameters of a
+        deviation calculated from the distribution of each parameter of a
         list of survivors
 
         Parameters
@@ -266,12 +275,12 @@ class GA(object):
 
         Returns
         -------
-        float
-            the value calculated for the mutation_factor
+        dict
+            the value calculated for the mutation_factor for each parameter
         """
 
-        # Initialize the value of the mutation _factor
-        mutation_factor = 0
+        # Initialize the dictionary of the mutation_factor
+        mutation_factor = {}
 
         # Calculate the standard deviation of each parameter among the survivors
         for param in self.genome.keys():
@@ -282,11 +291,8 @@ class GA(object):
             for survivor in survivors:
                 survivors_param.append(survivor.genome[param])
 
-            # calculate the standard deviation of this parameter
-            mutation_factor += np.std(survivors_param)
-
-        # Calculate the average 3*sigma deviation among all parameters
-        mutation_factor = 3*mutation_factor/len(self.genome.keys())
+            # set the mutation factor of this parameter
+            mutation_factor[param] = 3*np.std(survivors_param)
 
         return mutation_factor
 
@@ -297,10 +303,22 @@ class GA(object):
         input chosen by the user
         """
 
-        if self.mutation_factor == 'dynamic':
-            return self.dynamic_mutation_factor(survivors=self.survivors)
-        else:
+        # If mutation_factor is already a dictionary, return it
+        if type(self.mutation_factor) is dict:
             return self.mutation_factor
+
+        # If single value, turn into a dictionary repeating the given value for all parameters
+        elif type(self.mutation_factor) in (int, float):
+            mutation_factor = {}
+            for param in self.genome.keys():
+                mutation_factor[param] = self.mutation_factor
+
+            self.mutation_factor = mutation_factor
+            return self.mutation_factor
+
+        # If mutation factor is set as 'dynamic', return it
+        elif self.mutation_factor == 'dynamic':
+            return self.dynamic_mutation_factor(survivors=self.survivors)
 
 
     def plot2d(self, param1, param2, center=None):
